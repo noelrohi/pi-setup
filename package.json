@@ -22,7 +22,9 @@
   "dependencies": {
     "@mariozechner/pi-ai": "^0.73.0",
     "@mariozechner/pi-coding-agent": "^0.73.0",
+    "@types/turndown": "^5.0.6",
     "exa-js": "^2.12.1",
+    "turndown": "^7.2.4",
     "typebox": "^1.1.37"
   }
 }

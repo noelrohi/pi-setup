@@ -10,6 +10,7 @@ Personal Pi coding agent setup.
   - `/diff` — track files changed by the last agent run and open them in Zed
   - `/usage` — generate Pi/Codex usage and cost reports
   - Exa-powered `web_search`, `web_contents`, and `web_answer` tools
+  - direct `webfetch` URL reader inspired by OpenCode's WebFetch tool
   - fish shell handling for user `!` / `!!` commands
   - custom statusline
   - custom working verbs
