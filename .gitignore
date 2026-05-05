@@ -1,0 +1,13 @@
+# Pi local state / secrets
+auth.json
+sessions/
+pi-crash.log
+.env
+*.log
+
+# Local binaries / caches
+bin/
+node_modules/
+.DS_Store
+
+# Keep only portable setup files
