@@ -1,0 +1,27 @@
+{
+  "name": "agent",
+  "version": "1.0.0",
+  "description": "Personal Pi coding agent setup.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noelrohi/pi-setup.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/noelrohi/pi-setup/issues"
+  },
+  "homepage": "https://github.com/noelrohi/pi-setup#readme",
+  "dependencies": {
+    "@mariozechner/pi-ai": "^0.73.0",
+    "@mariozechner/pi-coding-agent": "^0.73.0",
+    "exa-js": "^2.12.1",
+    "typebox": "^1.1.37"
+  }
+}

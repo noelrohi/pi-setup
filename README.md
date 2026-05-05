@@ -9,6 +9,7 @@ Personal Pi coding agent setup.
   - `/copy-all` — copy the current user/assistant thread to clipboard
   - `/diff` — track files changed by the last agent run and open them in Zed
   - `/usage` — generate Pi/Codex usage and cost reports
+  - Exa-powered `web_search`, `web_contents`, and `web_answer` tools
   - fish shell handling for user `!` / `!!` commands
   - custom statusline
   - custom working verbs
@@ -20,7 +21,7 @@ Local state and secrets are intentionally ignored:
 
 - `auth.json`
 - `sessions/`
-- `.env`
+- `.env` — can contain `EXA_API_KEY=...` for Exa web tools
 - `bin/`
 - logs/crash files
 
@@ -34,6 +35,18 @@ Clone into `~/.pi/agent` or copy the files into an existing Pi agent directory.
 
 ```bash
 git clone https://github.com/rohi/pi-setup ~/.pi/agent
+```
+
+Install extension dependencies:
+
+```bash
+npm install
+```
+
+For Exa web search, add an API key to `~/.pi/agent/.env`:
+
+```bash
+EXA_API_KEY=your_key_here
 ```
 
 Then start Pi or run `/reload` inside Pi.
