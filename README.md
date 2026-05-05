@@ -24,6 +24,10 @@ Local state and secrets are intentionally ignored:
 - `bin/`
 - logs/crash files
 
+## Credits
+
+Some extensions were adapted from [davis7dotsh/my-pi-setup](https://github.com/davis7dotsh/my-pi-setup), especially the copy-all, diff, usage, and shell-hook patterns.
+
 ## Install
 
 Clone into `~/.pi/agent` or copy the files into an existing Pi agent directory.
