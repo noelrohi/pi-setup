@@ -40,7 +40,8 @@ git clone https://github.com/rohi/pi-setup ~/.pi/agent
 Install extension dependencies:
 
 ```bash
-npm install
+bun install
+# or: npm install
 ```
 
 For Exa web search, add an API key to `~/.pi/agent/.env`:
