@@ -6,6 +6,8 @@ import { Type } from "typebox";
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024;
 const DEFAULT_TIMEOUT_SECONDS = 30;
 const MAX_TIMEOUT_SECONDS = 120;
+const DEFAULT_MAX_OUTPUT_CHARS = 20_000;
+const MAX_OUTPUT_CHARS = 100_000;
 
 function asErrorMessage(error: unknown) {
 	return error instanceof Error ? error.message : String(error);
@@ -33,6 +35,11 @@ function htmlToMarkdown(html: string) {
 	});
 	turndown.remove(["script", "style", "meta", "link", "noscript", "iframe", "object", "embed"]);
 	return turndown.turndown(html).trim();
+}
+
+function truncateText(text: string, maxChars = DEFAULT_MAX_OUTPUT_CHARS) {
+	if (text.length <= maxChars) return text;
+	return `${text.slice(0, maxChars)}\n\n[Output truncated to ${maxChars.toLocaleString()} characters from ${text.length.toLocaleString()}. Re-fetch with a larger maxChars if needed.]`;
 }
 
 function htmlToText(html: string) {
@@ -65,6 +72,7 @@ export default function (pi: ExtensionAPI) {
 			url: Type.String({ description: "Fully-qualified URL to fetch. Must start with http:// or https://." }),
 			format: Type.Optional(StringEnum(["markdown", "text", "html"] as const)),
 			timeout: Type.Optional(Type.Number({ description: "Timeout in seconds. Max 120. Defaults to 30." })),
+			maxChars: Type.Optional(Type.Number({ description: "Maximum characters to return. Defaults to 20000, max 100000." })),
 		}),
 		async execute(_toolCallId, params, signal, onUpdate) {
 			try {
@@ -72,7 +80,7 @@ export default function (pi: ExtensionAPI) {
 					throw new Error("URL must start with http:// or https://");
 				}
 
-				onUpdate?.({ content: [{ type: "text", text: `Fetching URL: ${params.url}` }] });
+				onUpdate?.({ content: [{ type: "text", text: `Fetching URL: ${params.url}` }], details: {} });
 
 				const timeoutSeconds = Math.min(params.timeout ?? DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS);
 				const timeout = withTimeout(timeoutSeconds * 1000, signal);
@@ -110,10 +118,12 @@ export default function (pi: ExtensionAPI) {
 					const raw = new TextDecoder().decode(arrayBuffer);
 					const isHtml = contentType.includes("text/html") || /<html[\s>]/i.test(raw);
 					const output = format === "html" ? raw : isHtml ? (format === "text" ? htmlToText(raw) : htmlToMarkdown(raw)) : raw;
+					const maxChars = Math.min(params.maxChars ?? DEFAULT_MAX_OUTPUT_CHARS, MAX_OUTPUT_CHARS);
+					const text = output ? truncateText(output, maxChars) : "No readable content returned.";
 
 					return {
-						content: [{ type: "text", text: output || "No readable content returned." }],
-						details: { url: response.url, status: response.status, contentType, format },
+						content: [{ type: "text", text }],
+						details: { url: response.url, status: response.status, contentType, format, originalChars: output.length, returnedChars: text.length },
 					};
 				} finally {
 					timeout.clear();

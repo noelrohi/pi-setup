@@ -6,6 +6,9 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { StringEnum } from "@mariozechner/pi-ai";
 import { Type } from "typebox";
 
+const DEFAULT_MAX_OUTPUT_CHARS = 20_000;
+const MAX_OUTPUT_CHARS = 100_000;
+
 function readEnvValue(name: string) {
 	if (process.env[name]) return process.env[name];
 
@@ -42,8 +45,21 @@ function createClient() {
 	return new Exa(apiKey);
 }
 
-function stringify(value: unknown) {
-	return JSON.stringify(value, null, 2);
+function clampMaxChars(maxChars?: number) {
+	return Math.min(maxChars ?? DEFAULT_MAX_OUTPUT_CHARS, MAX_OUTPUT_CHARS);
+}
+
+function truncateText(text: string, maxChars = DEFAULT_MAX_OUTPUT_CHARS) {
+	if (text.length <= maxChars) return text;
+	return `${text.slice(0, maxChars)}\n\n[Output truncated to ${maxChars.toLocaleString()} characters from ${text.length.toLocaleString()}. Re-run with a larger maxChars if needed.]`;
+}
+
+function stringify(value: unknown, maxChars = DEFAULT_MAX_OUTPUT_CHARS) {
+	return truncateText(JSON.stringify(value, null, 2), maxChars);
+}
+
+function resultMetadata(result: unknown, text: string) {
+	return { originalChars: JSON.stringify(result).length, returnedChars: text.length };
 }
 
 function asErrorMessage(error: unknown) {
@@ -70,10 +86,11 @@ export default function (pi: ExtensionAPI) {
 			excludeDomains: Type.Optional(Type.Array(Type.String(), { description: "Domains to exclude." })),
 			startPublishedDate: Type.Optional(Type.String({ description: "ISO date lower bound, e.g. 2024-01-01." })),
 			endPublishedDate: Type.Optional(Type.String({ description: "ISO date upper bound." })),
+			maxChars: Type.Optional(Type.Number({ description: "Maximum characters to return. Defaults to 20000, max 100000." })),
 		}),
 		async execute(_toolCallId, params, signal, onUpdate) {
 			try {
-				onUpdate?.({ content: [{ type: "text", text: `Searching Exa for: ${params.query}` }] });
+				onUpdate?.({ content: [{ type: "text", text: `Searching Exa for: ${params.query}` }], details: {} });
 
 				const contentMode = params.contents ?? "highlights";
 				const contents = contentMode === "none" ? undefined : { [contentMode]: true };
@@ -90,9 +107,10 @@ export default function (pi: ExtensionAPI) {
 
 				if (signal?.aborted) throw new Error("Search cancelled");
 
+				const text = stringify(result, clampMaxChars(params.maxChars));
 				return {
-					content: [{ type: "text", text: stringify(result) }],
-					details: result,
+					content: [{ type: "text", text }],
+					details: resultMetadata(result, text),
 				};
 			} catch (error) {
 				return {
@@ -112,10 +130,11 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({
 			urls: Type.Array(Type.String(), { description: "URLs to fetch." }),
 			contents: Type.Optional(StringEnum(["text", "summary", "highlights"] as const)),
+			maxChars: Type.Optional(Type.Number({ description: "Maximum characters to return. Defaults to 20000, max 100000." })),
 		}),
 		async execute(_toolCallId, params, signal, onUpdate) {
 			try {
-				onUpdate?.({ content: [{ type: "text", text: `Fetching ${params.urls.length} URL(s) with Exa` }] });
+				onUpdate?.({ content: [{ type: "text", text: `Fetching ${params.urls.length} URL(s) with Exa` }], details: {} });
 
 				const contentMode = params.contents ?? "text";
 				const client = createClient();
@@ -123,9 +142,10 @@ export default function (pi: ExtensionAPI) {
 
 				if (signal?.aborted) throw new Error("Fetch cancelled");
 
+				const text = stringify(result, clampMaxChars(params.maxChars));
 				return {
-					content: [{ type: "text", text: stringify(result) }],
-					details: result,
+					content: [{ type: "text", text }],
+					details: resultMetadata(result, text),
 				};
 			} catch (error) {
 				return {
@@ -144,19 +164,21 @@ export default function (pi: ExtensionAPI) {
 		promptSnippet: "Use Exa answer for direct factual questions that need web citations.",
 		parameters: Type.Object({
 			question: Type.String({ description: "Question to answer with web citations." }),
+			maxChars: Type.Optional(Type.Number({ description: "Maximum characters to return. Defaults to 20000, max 100000." })),
 		}),
 		async execute(_toolCallId, params, signal, onUpdate) {
 			try {
-				onUpdate?.({ content: [{ type: "text", text: `Asking Exa: ${params.question}` }] });
+				onUpdate?.({ content: [{ type: "text", text: `Asking Exa: ${params.question}` }], details: {} });
 
 				const client = createClient();
 				const result = await client.answer(params.question);
 
 				if (signal?.aborted) throw new Error("Answer cancelled");
 
+				const text = stringify(result, clampMaxChars(params.maxChars));
 				return {
-					content: [{ type: "text", text: stringify(result) }],
-					details: result,
+					content: [{ type: "text", text }],
+					details: resultMetadata(result, text),
 				};
 			} catch (error) {
 				return {
