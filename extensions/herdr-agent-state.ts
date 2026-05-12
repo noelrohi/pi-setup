@@ -8,6 +8,23 @@ const HERDR_ENV = process.env.HERDR_ENV;
 const socketPath = process.env.HERDR_SOCKET_PATH;
 const paneId = process.env.HERDR_PANE_ID;
 const source = "herdr:pi";
+let agentLabel = "pi";
+
+function compactModelLabel(model: any): string | undefined {
+  if (!model) return undefined;
+  const id = String(model.id ?? model.model ?? model.name ?? "").trim();
+  if (!id) return undefined;
+  return id
+    .replace(/^claude-/, "")
+    .replace(/-20\d{6}$/, "")
+    .replace(/-latest$/, "")
+    .replace(/-preview$/, "");
+}
+
+function setModelLabel(model: any): void {
+  const modelLabel = compactModelLabel(model);
+  agentLabel = modelLabel ? `pi/${modelLabel}` : "pi";
+}
 
 function enabled() {
   return HERDR_ENV === "1" && !!socketPath && !!paneId;
@@ -44,7 +61,7 @@ function sendState(state: "working" | "blocked" | "idle", message?: string): Pro
     params: {
       pane_id: paneId,
       source,
-      agent: "pi",
+      agent: agentLabel,
       state,
       message,
     },
@@ -58,7 +75,7 @@ function releaseAgent(): Promise<void> {
     params: {
       pane_id: paneId,
       source,
-      agent: "pi",
+      agent: agentLabel,
     },
   });
 }
@@ -84,15 +101,25 @@ export default function (pi) {
     return { state: "idle" as const, message: undefined };
   }
 
-  function publishState() {
+  function publishState(force = false) {
     const next = desiredState();
-    if (next.state === lastState && next.message === lastMessage) {
+    if (!force && next.state === lastState && next.message === lastMessage) {
       return;
     }
     lastState = next.state;
     lastMessage = next.message;
     void sendState(next.state, next.message);
   }
+
+  pi.on("session_start", (event, ctx) => {
+    setModelLabel(ctx?.model);
+    publishState(true);
+  });
+
+  pi.on("model_select", (event) => {
+    setModelLabel(event?.model);
+    publishState(true);
+  });
 
   pi.events.on("herdr:blocked", (data) => {
     if (!data?.active) {
