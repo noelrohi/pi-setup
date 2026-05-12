@@ -1,15 +1,15 @@
 {
   "lastChangelogVersion": "0.74.0",
-  "defaultProvider": "opencode-go",
-  "defaultModel": "kimi-k2.5",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
   "hideThinkingBlock": false,
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "low",
   "theme": "vercel",
   "steeringMode": "one-at-a-time",
   "enabledModels": [
     "openai-codex/gpt-5.5",
-    "opencode-go/kimi-k2.5",
     "opencode-go/deepseek-v4-flash",
-    "opencode-go/deepseek-v4-pro"
+    "opencode-go/deepseek-v4-pro",
+    "opencode-go/kimi-k2.6"
   ]
 }
