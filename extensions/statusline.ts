@@ -1,5 +1,4 @@
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 let modelLabel = "?";
 let providerLabel = "?";
@@ -8,6 +7,21 @@ let contextLabel = "ctx:?";
 let gitStatus = "-";
 let interval: ReturnType<typeof setInterval> | undefined;
 let requestRender: (() => void) | undefined;
+let lastGitRefresh = 0;
+let gitRefreshPromise: Promise<void> | undefined;
+
+const GIT_REFRESH_THROTTLE_MS = 5_000;
+const ANSI_PATTERN = /\x1b\[[0-?]*[ -/]*[@-~]/g;
+
+function visibleWidth(value: string) {
+	return value.replace(ANSI_PATTERN, "").length;
+}
+
+function truncateToWidth(value: string, width: number) {
+	if (visibleWidth(value) <= width) return value;
+	// Keep the footer cheap: in the rare case we need truncation, avoid expensive ANSI-aware slicing.
+	return value.replace(ANSI_PATTERN, "").slice(0, Math.max(0, width - 1)) + "…";
+}
 
 function displayModel(id: string) {
 	return id.replace(/^claude-/, "").replace(/-20\d{6}$/, "");
@@ -46,6 +60,22 @@ async function updateGit(pi: ExtensionAPI) {
 		"git rev-parse --is-inside-work-tree >/dev/null 2>&1 && { branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git rev-parse --short HEAD); dirty=$(git status --porcelain 2>/dev/null | head -1); printf '%s%s' \"$branch\" \"${dirty:+*}\"; }",
 	], { timeout: 1000 });
 	gitStatus = result.code === 0 && result.stdout.trim() ? result.stdout.trim() : "-";
+	lastGitRefresh = Date.now();
+}
+
+function refreshGit(pi: ExtensionAPI, force = false) {
+	const now = Date.now();
+	if (gitRefreshPromise) return force ? gitRefreshPromise : undefined;
+	if (!force && now - lastGitRefresh < GIT_REFRESH_THROTTLE_MS) return undefined;
+
+	gitRefreshPromise = updateGit(pi)
+		.catch(() => undefined)
+		.finally(() => {
+			gitRefreshPromise = undefined;
+			requestRender?.();
+		});
+
+	return force ? gitRefreshPromise : undefined;
 }
 
 function installFooter(ctx: ExtensionContext) {
@@ -93,9 +123,9 @@ function installFooter(ctx: ExtensionContext) {
 }
 
 export default function (pi: ExtensionAPI) {
-	async function refresh(ctx?: ExtensionContext) {
+	async function refresh(ctx?: ExtensionContext, options: { forceGit?: boolean } = {}) {
 		updateContext(ctx);
-		await updateGit(pi).catch(() => undefined);
+		await refreshGit(pi, options.forceGit);
 		requestRender?.();
 		if (ctx && !requestRender) installFooter(ctx);
 	}
@@ -105,9 +135,9 @@ export default function (pi: ExtensionAPI) {
 		providerLabel = ctx.model?.provider || providerLabel;
 		thinkingLabel = pi.getThinkingLevel();
 		installFooter(ctx);
-		await refresh(ctx);
+		await refresh(ctx, { forceGit: true });
 		if (interval) clearInterval(interval);
-		interval = setInterval(() => refresh(), 30_000);
+		interval = setInterval(() => void refresh(undefined, { forceGit: true }), 30_000);
 	});
 
 	pi.on("model_select", async (event, ctx) => {
@@ -127,5 +157,6 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_shutdown", async () => {
 		if (interval) clearInterval(interval);
+		interval = undefined;
 	});
 }

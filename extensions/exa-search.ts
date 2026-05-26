@@ -1,13 +1,20 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import Exa from "exa-js";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { StringEnum } from "@mariozechner/pi-ai";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 const DEFAULT_MAX_OUTPUT_CHARS = 20_000;
 const MAX_OUTPUT_CHARS = 100_000;
+
+function StringEnum<T extends readonly string[]>(values: T, options?: { description?: string; default?: T[number] }) {
+	return Type.Unsafe<T[number]>({
+		type: "string",
+		enum: values as unknown as string[],
+		...(options?.description ? { description: options.description } : {}),
+		...(options?.default ? { default: options.default } : {}),
+	});
+}
 
 function readEnvValue(name: string) {
 	if (process.env[name]) return process.env[name];
@@ -39,9 +46,10 @@ function readEnvValue(name: string) {
 	return undefined;
 }
 
-function createClient() {
+async function createClient() {
 	const apiKey = readEnvValue("EXA_API_KEY");
 	if (!apiKey) throw new Error("Missing EXA_API_KEY in environment or ~/.pi/agent/.env");
+	const { default: Exa } = await import("exa-js");
 	return new Exa(apiKey);
 }
 
@@ -94,7 +102,7 @@ export default function (pi: ExtensionAPI) {
 
 				const contentMode = params.contents ?? "highlights";
 				const contents = contentMode === "none" ? undefined : { [contentMode]: true };
-				const client = createClient();
+				const client = await createClient();
 				const result = await client.search(params.query, {
 					numResults: params.numResults ?? 5,
 					type: params.type ?? "auto",
@@ -137,7 +145,7 @@ export default function (pi: ExtensionAPI) {
 				onUpdate?.({ content: [{ type: "text", text: `Fetching ${params.urls.length} URL(s) with Exa` }], details: {} });
 
 				const contentMode = params.contents ?? "text";
-				const client = createClient();
+				const client = await createClient();
 				const result = await client.getContents(params.urls, { [contentMode]: true } as any);
 
 				if (signal?.aborted) throw new Error("Fetch cancelled");
@@ -170,7 +178,7 @@ export default function (pi: ExtensionAPI) {
 			try {
 				onUpdate?.({ content: [{ type: "text", text: `Asking Exa: ${params.question}` }], details: {} });
 
-				const client = createClient();
+				const client = await createClient();
 				const result = await client.answer(params.question);
 
 				if (signal?.aborted) throw new Error("Answer cancelled");

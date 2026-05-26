@@ -1,6 +1,4 @@
-import TurndownService from "turndown";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { StringEnum } from "@mariozechner/pi-ai";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024;
@@ -8,6 +6,15 @@ const DEFAULT_TIMEOUT_SECONDS = 30;
 const MAX_TIMEOUT_SECONDS = 120;
 const DEFAULT_MAX_OUTPUT_CHARS = 20_000;
 const MAX_OUTPUT_CHARS = 100_000;
+
+function StringEnum<T extends readonly string[]>(values: T, options?: { description?: string; default?: T[number] }) {
+	return Type.Unsafe<T[number]>({
+		type: "string",
+		enum: values as unknown as string[],
+		...(options?.description ? { description: options.description } : {}),
+		...(options?.default ? { default: options.default } : {}),
+	});
+}
 
 function asErrorMessage(error: unknown) {
 	return error instanceof Error ? error.message : String(error);
@@ -25,7 +32,8 @@ function withTimeout(ms: number, signal?: AbortSignal) {
 	return { signal: controller.signal, clear: () => clearTimeout(timeout) };
 }
 
-function htmlToMarkdown(html: string) {
+async function htmlToMarkdown(html: string) {
+	const { default: TurndownService } = await import("turndown");
 	const turndown = new TurndownService({
 		headingStyle: "atx",
 		hr: "---",
@@ -117,7 +125,7 @@ export default function (pi: ExtensionAPI) {
 					const contentType = response.headers.get("content-type") ?? "";
 					const raw = new TextDecoder().decode(arrayBuffer);
 					const isHtml = contentType.includes("text/html") || /<html[\s>]/i.test(raw);
-					const output = format === "html" ? raw : isHtml ? (format === "text" ? htmlToText(raw) : htmlToMarkdown(raw)) : raw;
+					const output = format === "html" ? raw : isHtml ? (format === "text" ? htmlToText(raw) : await htmlToMarkdown(raw)) : raw;
 					const maxChars = Math.min(params.maxChars ?? DEFAULT_MAX_OUTPUT_CHARS, MAX_OUTPUT_CHARS);
 					const text = output ? truncateText(output, maxChars) : "No readable content returned.";
 

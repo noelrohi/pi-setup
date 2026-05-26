@@ -1,0 +1,9 @@
+{
+  "identifier": "roam-local-api-beta",
+  "transport": {
+    "kind": "unix",
+    "socketPath": "/Users/rohi/Library/Application Support/Roam/roam-local-api-beta.sock"
+  },
+  "activePath": "/api/v1/activity/pi/agent-start",
+  "stopPath": "/api/v1/activity/pi/agent-end"
+}

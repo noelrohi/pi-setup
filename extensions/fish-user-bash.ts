@@ -1,8 +1,5 @@
 import { basename } from "node:path";
-import {
-	createLocalBashOperations,
-	type ExtensionAPI,
-} from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 function shellQuote(value: string) {
 	return `'${value.replaceAll("'", `'\\''`)}'`;
@@ -17,9 +14,14 @@ function getFishPath() {
 }
 
 export default function (pi: ExtensionAPI) {
-	const local = createLocalBashOperations();
+	let localPromise: Promise<ReturnType<typeof import("@earendil-works/pi-coding-agent").createLocalBashOperations>> | undefined;
+	const getLocal = async () => {
+		localPromise ||= import("@earendil-works/pi-coding-agent").then((module) => module.createLocalBashOperations());
+		return localPromise;
+	};
 
-	pi.on("user_bash", () => {
+	pi.on("user_bash", async () => {
+		const local = await getLocal();
 		return {
 			operations: {
 				exec(command, cwd, options) {
