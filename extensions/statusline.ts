@@ -1,4 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 let modelLabel = "?";
 let providerLabel = "?";
@@ -11,18 +12,6 @@ let lastGitRefresh = 0;
 let gitRefreshPromise: Promise<void> | undefined;
 
 const GIT_REFRESH_THROTTLE_MS = 5_000;
-const ANSI_PATTERN = /\x1b\[[0-?]*[ -/]*[@-~]/g;
-
-function visibleWidth(value: string) {
-	return value.replace(ANSI_PATTERN, "").length;
-}
-
-function truncateToWidth(value: string, width: number) {
-	if (visibleWidth(value) <= width) return value;
-	// Keep the footer cheap: in the rare case we need truncation, avoid expensive ANSI-aware slicing.
-	return value.replace(ANSI_PATTERN, "").slice(0, Math.max(0, width - 1)) + "…";
-}
-
 function displayModel(id: string) {
 	return id.replace(/^claude-/, "").replace(/-20\d{6}$/, "");
 }

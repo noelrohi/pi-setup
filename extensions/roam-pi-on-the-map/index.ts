@@ -3,16 +3,14 @@
 // This extension sends only empty local activity heartbeats to Roam.
 // It never reads or forwards prompts, messages, tool data, files, or session contents.
 import { request } from "node:http";
-import { access, readdir, readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const ENDPOINTS_DIR = "/Users/rohi/.pi/agent/extensions/roam-pi-on-the-map/endpoints";
 const REQUEST_TIMEOUT_MS = 200;
 const HEARTBEAT_MS = 60000;
-const ENDPOINT_CACHE_MS = 30000;
 const PID = String(process.pid);
 let heartbeat;
-let endpointCache;
 
 const isEndpoint = (endpoint) => {
   if (endpoint === null || typeof endpoint !== "object") return false;
@@ -25,11 +23,6 @@ const isEndpoint = (endpoint) => {
 };
 
 const readEndpoints = async () => {
-  const now = Date.now();
-  if (endpointCache && now - endpointCache.loadedAt < ENDPOINT_CACHE_MS) {
-    return endpointCache.endpoints;
-  }
-
   try {
     const names = await readdir(ENDPOINTS_DIR);
     const endpoints = [];
@@ -43,10 +36,8 @@ const readEndpoints = async () => {
         // Ignore malformed or unreadable endpoint registrations.
       }
     }
-    endpointCache = { loadedAt: now, endpoints };
     return endpoints;
   } catch {
-    endpointCache = { loadedAt: now, endpoints: [] };
     return [];
   }
 };
@@ -80,11 +71,6 @@ const postToEndpoint = async (endpoint, urlPath) => {
       const port = Number(rawPort);
       if (!Number.isInteger(port) || port <= 0) return;
       await postWithOptions({ host: "127.0.0.1", port, path, method: "POST" });
-      return;
-    }
-    try {
-      await access(endpoint.transport.socketPath);
-    } catch {
       return;
     }
     await postWithOptions({ socketPath: endpoint.transport.socketPath, path, method: "POST" });
