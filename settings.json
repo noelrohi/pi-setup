@@ -1,9 +1,9 @@
 {
-  "lastChangelogVersion": "0.77.0",
+  "lastChangelogVersion": "0.78.0",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.5",
   "hideThinkingBlock": false,
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "xhigh",
   "theme": "vercel",
   "steeringMode": "one-at-a-time",
   "enabledModels": [
@@ -11,5 +11,11 @@
     "opencode-go/deepseek-v4-flash",
     "opencode-go/deepseek-v4-pro",
     "opencode-go/kimi-k2.6"
+  ],
+  "packages": [
+    "./load-env.ts",
+    "npm:pi-websearch-exa@0.2.0",
+    "npm:pi-dynamic-workflows",
+    "git:github.com/Michaelliv/pi-goal@806d849f4dc86dfa2bb1a59b977248fefb9c25be"
   ]
 }

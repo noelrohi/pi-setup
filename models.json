@@ -1,0 +1,25 @@
+{
+  "providers": {
+    "opencode-go": {
+      "models": [
+        {
+          "id": "minimax-m3",
+          "name": "MiniMax M3",
+          "api": "openai-completions",
+          "provider": "opencode-go",
+          "baseUrl": "https://opencode.ai/zen/go/v1",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": {
+            "input": 0.3,
+            "output": 1.2,
+            "cacheRead": 0.06,
+            "cacheWrite": 0
+          },
+          "contextWindow": 204800,
+          "maxTokens": 131072
+        }
+      ]
+    }
+  }
+}

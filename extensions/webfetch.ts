@@ -6,6 +6,7 @@ const DEFAULT_TIMEOUT_SECONDS = 30;
 const MAX_TIMEOUT_SECONDS = 120;
 const DEFAULT_MAX_OUTPUT_CHARS = 20_000;
 const MAX_OUTPUT_CHARS = 100_000;
+const READABLE_CONTENT_TYPE_DESCRIPTION = "HTML, markdown, plain text, JSON, XML, or JavaScript";
 
 function StringEnum<T extends readonly string[]>(values: T, options?: { description?: string; default?: T[number] }) {
 	return Type.Unsafe<T[number]>({
@@ -18,6 +19,74 @@ function StringEnum<T extends readonly string[]>(values: T, options?: { descript
 
 function asErrorMessage(error: unknown) {
 	return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeContentType(contentType: string) {
+	return contentType.split(";")[0]?.trim().toLowerCase() ?? "";
+}
+
+function isReadableContentType(contentType: string) {
+	const mediaType = normalizeContentType(contentType);
+	if (!mediaType) return true;
+	if (mediaType.startsWith("image/") || mediaType.startsWith("audio/") || mediaType.startsWith("video/") || mediaType.startsWith("font/")) {
+		return false;
+	}
+	if (mediaType.startsWith("text/")) return true;
+	return (
+		mediaType === "application/json" ||
+		mediaType.endsWith("+json") ||
+		mediaType === "application/xml" ||
+		mediaType.endsWith("+xml") ||
+		mediaType === "application/javascript" ||
+		mediaType === "application/ecmascript"
+	);
+}
+
+function startsWithBytes(bytes: Uint8Array, signature: number[]) {
+	return signature.every((value, index) => bytes[index] === value);
+}
+
+function looksLikeBinary(arrayBuffer: ArrayBuffer) {
+	const bytes = new Uint8Array(arrayBuffer);
+	if (bytes.length === 0) return false;
+
+	if (
+		startsWithBytes(bytes, [0x89, 0x50, 0x4e, 0x47]) || // PNG
+		startsWithBytes(bytes, [0xff, 0xd8, 0xff]) || // JPEG
+		startsWithBytes(bytes, [0x47, 0x49, 0x46, 0x38]) || // GIF
+		startsWithBytes(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d]) || // PDF
+		startsWithBytes(bytes, [0x50, 0x4b, 0x03, 0x04]) || // ZIP / OOXML / JAR
+		startsWithBytes(bytes, [0x1f, 0x8b]) // gzip
+	) {
+		return true;
+	}
+
+	if (
+		bytes.length >= 12 &&
+		startsWithBytes(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+		bytes[8] === 0x57 &&
+		bytes[9] === 0x45 &&
+		bytes[10] === 0x42 &&
+		bytes[11] === 0x50
+	) {
+		return true;
+	}
+
+	const sampleLength = Math.min(bytes.length, 4096);
+	let controlCharacters = 0;
+	for (let i = 0; i < sampleLength; i++) {
+		const byte = bytes[i];
+		if (byte === 0) return true;
+		if (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13 && byte !== 27) {
+			controlCharacters++;
+		}
+	}
+
+	return controlCharacters / sampleLength > 0.02;
+}
+
+function nonReadableMessage(url: string, reason: string) {
+	return `Web fetch blocked: ${reason}. webfetch only reads ${READABLE_CONTENT_TYPE_DESCRIPTION}; use a page/document URL instead of an image, PDF, download, or binary asset. URL: ${url}`;
 }
 
 function withTimeout(ms: number, signal?: AbortSignal) {
@@ -69,12 +138,13 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "webfetch",
 		label: "Fetch Web Page",
-		description: "Fetch a URL directly without a search API. Converts HTML to markdown by default.",
+		description: "Fetch a URL directly without a search API. Converts HTML to markdown by default. Fails on images, PDFs, downloads, and other binary/non-readable assets.",
 		promptSnippet: "Fetch exact URLs directly when the user provides a link or when a result URL needs to be read.",
 		promptGuidelines: [
 			"Use webfetch for exact URLs and docs pages.",
 			"Use web_search for discovery/search queries; webfetch does not search by itself.",
 			"Prefer markdown unless raw HTML or plain text is specifically needed.",
+			"webfetch intentionally errors on image, PDF, download, and other binary/non-readable URLs; use a page or text endpoint instead.",
 		],
 		parameters: Type.Object({
 			url: Type.String({ description: "Fully-qualified URL to fetch. Must start with http:// or https://." }),
@@ -112,6 +182,11 @@ export default function (pi: ExtensionAPI) {
 
 					if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
 
+					const contentType = response.headers.get("content-type") ?? "";
+					if (!isReadableContentType(contentType)) {
+						throw new Error(nonReadableMessage(response.url, `non-readable content type ${normalizeContentType(contentType) || "unknown"}`));
+					}
+
 					const contentLength = response.headers.get("content-length");
 					if (contentLength && Number(contentLength) > MAX_RESPONSE_SIZE) {
 						throw new Error("Response too large (exceeds 5MB limit)");
@@ -122,7 +197,10 @@ export default function (pi: ExtensionAPI) {
 						throw new Error("Response too large (exceeds 5MB limit)");
 					}
 
-					const contentType = response.headers.get("content-type") ?? "";
+					if (looksLikeBinary(arrayBuffer)) {
+						throw new Error(nonReadableMessage(response.url, "response body looks binary/non-text"));
+					}
+
 					const raw = new TextDecoder().decode(arrayBuffer);
 					const isHtml = contentType.includes("text/html") || /<html[\s>]/i.test(raw);
 					const output = format === "html" ? raw : isHtml ? (format === "text" ? htmlToText(raw) : await htmlToMarkdown(raw)) : raw;
@@ -137,11 +215,7 @@ export default function (pi: ExtensionAPI) {
 					timeout.clear();
 				}
 			} catch (error) {
-				return {
-					content: [{ type: "text", text: `Web fetch failed: ${asErrorMessage(error)}` }],
-					details: { error: asErrorMessage(error) },
-					isError: true,
-				};
+				throw new Error(`Web fetch failed: ${asErrorMessage(error)}`);
 			}
 		},
 	});
