@@ -1,9 +1,9 @@
 {
-  "lastChangelogVersion": "0.78.0",
+  "lastChangelogVersion": "0.78.1",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.5",
   "hideThinkingBlock": false,
-  "defaultThinkingLevel": "xhigh",
+  "defaultThinkingLevel": "low",
   "theme": "vercel",
   "steeringMode": "one-at-a-time",
   "enabledModels": [
@@ -14,8 +14,6 @@
   ],
   "packages": [
     "./load-env.ts",
-    "npm:pi-websearch-exa@0.2.0",
-    "npm:pi-dynamic-workflows",
-    "git:github.com/Michaelliv/pi-goal@806d849f4dc86dfa2bb1a59b977248fefb9c25be"
+    "npm:pi-websearch-exa@0.2.0"
   ]
 }

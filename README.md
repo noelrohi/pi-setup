@@ -15,7 +15,6 @@ Personal Pi coding agent setup.
   - custom statusline
   - custom working verbs
 - `pi-websearch-exa@0.2.0` package — provides the `web_search` tool
-- `pi-goal` package — provides `/goal` and the `pi-goal-writer` skill for persistent autonomous goals
 - `themes/vercel.json` — Pi theme adapted from the Ghostty Vercel palette
 
 ## Not included
