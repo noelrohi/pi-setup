@@ -1,5 +1,6 @@
 # Pi local state / secrets
 auth.json
+trust.json
 cursor-sdk-model-list.json
 sessions/
 pi-crash.log

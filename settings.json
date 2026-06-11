@@ -1,21 +1,17 @@
 {
-  "lastChangelogVersion": "0.78.1",
-  "defaultProvider": "cursor",
-  "defaultModel": "composer-2-5",
+  "lastChangelogVersion": "0.79.1",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
   "hideThinkingBlock": false,
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "low",
   "theme": "vercel",
   "steeringMode": "one-at-a-time",
   "enabledModels": [
     "openai-codex/gpt-5.5",
-    "cursor/composer-2-5",
-    "opencode-go/deepseek-v4-flash",
-    "opencode-go/deepseek-v4-pro",
-    "opencode-go/kimi-k2.6"
+    "anthropic/claude-fable-5"
   ],
   "packages": [
     "./load-env.ts",
-    "npm:pi-websearch-exa@0.2.0",
-    "npm:pi-cursor-sdk"
+    "npm:pi-websearch-exa@0.2.0"
   ]
 }
