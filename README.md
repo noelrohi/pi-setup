@@ -14,7 +14,6 @@ Personal Pi coding agent setup.
   - fish shell handling for user `!` / `!!` commands
   - custom statusline
   - custom working verbs
-- `pi-websearch-exa@0.2.0` package — provides the `web_search` tool
 - `themes/vercel.json` — Pi theme adapted from the Ghostty Vercel palette
 
 ## Not included
@@ -46,10 +45,4 @@ bun install
 # or: npm install
 ```
 
-For Exa web search, add an API key to `~/.pi/agent/.env`:
-
-```bash
-EXA_API_KEY=your_key_here
-```
-
-`settings.json` loads `./load-env.ts` before `npm:pi-websearch-exa@0.2.0`, so the package can see `EXA_API_KEY`. Then start Pi or run `/reload` inside Pi.
+The bundled `extensions/web-tools/` extension provides Exa-powered web search without requiring an API key. Start Pi or run `/reload` inside Pi after changing the configuration.

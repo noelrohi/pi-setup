@@ -14,3 +14,4 @@ node_modules/
 .DS_Store
 
 # Keep only portable setup files
+pi-fff

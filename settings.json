@@ -1,17 +1,17 @@
 {
-  "lastChangelogVersion": "0.79.1",
+  "lastChangelogVersion": "0.80.6",
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5",
+  "defaultModel": "gpt-5.6-sol",
   "hideThinkingBlock": false,
-  "defaultThinkingLevel": "low",
+  "defaultThinkingLevel": "medium",
   "theme": "vercel",
   "steeringMode": "one-at-a-time",
   "enabledModels": [
-    "openai-codex/gpt-5.5",
-    "anthropic/claude-fable-5"
+    "openai-codex/gpt-5.6-sol",
+    "openai-codex/gpt-5.6-terra"
   ],
   "packages": [
     "./load-env.ts",
-    "npm:pi-websearch-exa@0.2.0"
+    "npm:pi-fff"
   ]
 }
